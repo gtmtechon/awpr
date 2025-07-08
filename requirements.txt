@@ -3,4 +3,3 @@
 # Manually managing azure-functions-worker may cause unexpected issues
 requests==2.31.0
 azure-functions==1.16.0
-azure-functions-logging==0.2.0
