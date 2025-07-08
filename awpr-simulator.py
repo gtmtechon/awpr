@@ -32,8 +32,8 @@ def RobotSimulatorFunction(timerInfo: func.TimerRequest):
     headers = {
         'Content-Type': 'application/json',
     }
-    if apim_subscription_key:
-        headers['Ocp-Apim-Subscription-Key'] = apim_subscription_key
+    #if apim_subscription_key:
+    #    headers['Ocp-Apim-Subscription-Key'] = apim_subscription_key
 
     for i in range(NUM_ROBOTS):
         robotid = f"robot-{i + 1:02d}"  # robot-01, robot-02
