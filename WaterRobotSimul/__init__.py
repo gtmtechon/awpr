@@ -71,9 +71,28 @@ def RobotSimulatorFunction(mytimer: TimerRequest):
 
     logging.info('Robot simulator function finished.')
     
+def main():
+    print("test1 called")
+    logging.info('Robot simulator function started')
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    robot_api_url = "https://iotmon-comm-be.azurewebsites.net/api/waterbots"
+    robot_data = {
+        "botId": "water-robot-001",  # 로봇 ID
+        "location": "37.5050,127.1000",  # 예시 위치 (위도, 경도)
+        "botName": "water-robot-001",  # 로봇 이름
+        "status": "WORKING",  # 로봇 상태 
+        "locationCooSys":"GCS;WGS84",
+        "lastUpdated": datetime.now().isoformat() # 현재 시간 (ISO 8601 형식)
+    }
+    response = requests.post(robot_api_url, headers=headers, json=robot_data)
+    response.raise_for_status() # HTTP 오류 발생 시 예외 발생
+    
+                 
+    
 
-
-def main(mytimer: TimerRequest) -> None:
+def main2(mytimer: TimerRequest) -> None:
     utc_timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
     logging.info('Robot simulator function started at: %s', utc_timestamp)
 
