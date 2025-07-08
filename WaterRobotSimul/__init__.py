@@ -15,7 +15,7 @@ ROBOT_STATUSES = ["WORKING", "MOVING", "INREST","OFF"]
 
 
 #@app.timer_trigger(schedule="*/30 * * * * *", arg_name="myTimer", run_on_startup=False, use_monitor=False) 
-def RobotSimulatorFunction(timerInfo: func.TimerRequest):
+def RobotSimulatorFunction(mytimer: TimerRequest):
     utc_timestamp = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
     logging.info('Robot simulator function started at: %s', utc_timestamp)
 
@@ -74,3 +74,4 @@ def main(mytimer: TimerRequest) -> None:
         logging.info('The timer is past due!')
 
     logging.info('Python timer trigger function ran at %s', utc_timestamp)
+    RobotSimulatorFunction(mytimer)
