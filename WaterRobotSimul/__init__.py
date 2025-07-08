@@ -19,11 +19,54 @@ ROBOT_STATUSES = ["WORKING", "MOVING", "INREST","OFF"]
 
 
 def main(mytimer: TimerRequest):
-    robot_api_url = "https://iotmon-comm-be.azurewebsites.net/api/waterbots"
+    utc_timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
+    logging.info('Robot simulator function started at: %s', utc_timestamp)
 
-    response = requests.get(robot_api_url)
-    print("response:", response)
-    logging.info('response: %s', response.text)
+    robot_api_url = os.environ.get("ROBOT_API_URL")
+    #apim_subscription_key = os.environ.get("APIM_SUBSCRIPTION_KEY")
+
+    if not robot_api_url:
+        robot_api_url = "https://iotmon-comm-be.azurewebsites.net/api/waterbots"
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    #if apim_subscription_key:
+    #    headers['Ocp-Apim-Subscription-Key'] = apim_subscription_key
+
+    robotid = "water-robot-001"  # robot-01, robot-02
+
+    # 랜덤 위치 생성 (소수점 6자리로 포맷)
+    latitude = round(MIN_LAT + (MAX_LAT - MIN_LAT) * random.random(), 6)
+    longitude = round(MIN_LON + (MAX_LON - MIN_LON) * random.random(), 6)
+
+    # 랜덤 상태 선택
+    status = "WORKING"
+
+    # JSON 메시지 생성
+    robot_data = {
+        "botId": robotid,
+        "location": str(latitude)+","+ str(longitude), # 문자열로 변환하여 전송
+        "botName": robotid,
+        "status": status,
+        "locationCooSys":"GCS;WGS84",
+        "lastUpdated": datetime.now().isoformat() # 현재 시간 (ISO 8601 형식)
+    }
+
+    try:
+        logging.info("Sending data for %s: %s", robotid, json.dumps(robot_data))
+        response = requests.post(robot_api_url, headers=headers, json=robot_data)
+        response.raise_for_status() # HTTP 오류 발생 시 예외 발생
+
+        logging.info("Successfully sent data for %s. Status: %d, Response: %s",
+                        robotid, response.status_code, response.text)
+
+    except requests.exceptions.RequestException as e:
+        logging.error("Error sending data for %s: %s", robotid, e)
+    except Exception as e:
+        logging.error("An unexpected error occurred for %s: %s", robotid, e)
+
+    logging.info('Robot simulator function finished.')
     
 
                  
