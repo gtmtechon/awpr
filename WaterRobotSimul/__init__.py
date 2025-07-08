@@ -70,8 +70,16 @@ def RobotSimulatorFunction(mytimer: TimerRequest):
             logging.error("An unexpected error occurred for %s: %s", robotid, e)
 
     logging.info('Robot simulator function finished.')
+
+def main(mytimer: TimerRequest)->None:
+    robot_api_url = "https://iotmon-comm-be.azurewebsites.net/api/waterbots"
+
+    response = requests.get(robot_api_url)
+    print("response:", response)
+    logging.info('response: %s', response.text)
     
-def main():
+    
+def main3(mytimer: TimerRequest)->None:
     print("test1 called")
     logging.info('Robot simulator function started')
     headers = {
