@@ -67,56 +67,42 @@ def RobotSimulatorFunction(mytimer: TimerRequest):
     logging.info('Robot simulator function finished.')
     
 
+
+
 def main(mytimer: TimerRequest) -> None:
-    utc_timestamp = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
+    utc_timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
     logging.info('Robot simulator function started at: %s', utc_timestamp)
 
-    robot_api_url = os.environ.get("ROBOT_API_URL")
-    #apim_subscription_key = os.environ.get("APIM_SUBSCRIPTION_KEY")
+#################
+    robot_id = "RB001"
+    latitude = 37.5665
+    longitude = 126.9780
+    status = "ACTIVE"
 
-    print("robot_api_url:", robot_api_url)
-    
-    if not robot_api_url:
-        logging.error("Missing environment variable: ROBOT_API_URL")
-        return
-
-    headers = {
-        'Content-Type': 'application/json',
+    payload = {
+        "robotId": robot_id,
+        "location": f"{latitude},{longitude}",
+        "status": status,
+        "locationcoosys": "GCS;WGS84",
+        "lastupdated": datetime.datetime.now().isoformat()
     }
-    #if apim_subscription_key:
-    #    headers['Ocp-Apim-Subscription-Key'] = apim_subscription_key
 
-    for i in range(NUM_ROBOTS):
-        robotid = f"robot-{i + 1:02d}"  # robot-01, robot-02
+    # 2. API endpoint
+    url = "https://iotmon-comm-be.azurewebsites.net/api/waterbots"
 
-        # 랜덤 위치 생성 (소수점 6자리로 포맷)
-        latitude = round(MIN_LAT + (MAX_LAT - MIN_LAT) * random.random(), 6)
-        longitude = round(MIN_LON + (MAX_LON - MIN_LON) * random.random(), 6)
+    # 3. 요청 헤더 (필요 시 Authorization 추가 가능)
+    headers = {
+        "Content-Type": "application/json"
+    }
 
-        # 랜덤 상태 선택
-        status =ROBOT_STATUSES[0]
+    # 4. POST 요청 보내기
+    response = requests.post(url, json=payload, headers=headers)
 
-        # JSON 메시지 생성
-        robot_data = {
-            "robotId": robotid,
-            "location": str(latitude)+","+ str(longitude), # 문자열로 변환하여 전송
-            "status": status,
-            "locationcoosys":"GCS;WGS84",
-            "lastupdated": datetime.datetime.now().isoformat() # 현재 시간 (ISO 8601 형식)
-        }
-        print("robot_data:", robot_data)
+    # 5. 응답 처리
+    print(f"Status Code: {response.status_code}")
+    print(f"Response: {response.text}")
 
-        try:
-            logging.info("Sending data for %s: %s", robotid, json.dumps(robot_data))
-            response = requests.post(robot_api_url, headers=headers, json=robot_data)
-            response.raise_for_status() # HTTP 오류 발생 시 예외 발생
+    RobotSimulatorFunction(mytimer)
 
-            logging.info("Successfully sent data for %s. Status: %d, Response: %s",
-                         robotid, response.status_code, response.text)
-
-        except requests.exceptions.RequestException as e:
-            logging.error("Error sending data for %s: %s", robotid, e)
-        except Exception as e:
-            logging.error("An unexpected error occurred for %s: %s", robotid, e)
-
-        logging.info('Robot simulator function finished.')
+    logging.info('Robot simulator function finished at: %s', utc_timestamp)
+    
