@@ -35,7 +35,8 @@ def main(mytimer: TimerRequest):
     #    headers['Ocp-Apim-Subscription-Key'] = apim_subscription_key
 
     for i in range(NUM_ROBOTS):
-        robotid = f"robot-{i + 1:02d}"  # robot-01, robot-02
+        
+        robotid = f"aw-robot-{i + 1:02d}"  # robot-01, robot-02
 
         # 랜덤 위치 생성 (소수점 6자리로 포맷)
         latitude = round(MIN_LAT + (MAX_LAT - MIN_LAT) * random.random(), 6)
