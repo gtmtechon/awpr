@@ -3,6 +3,7 @@ import os
 import random
 import json
 import redis
+from azure.functions import TimerRequest
 from datetime import datetime, timezone
 
 # 로깅 설정
