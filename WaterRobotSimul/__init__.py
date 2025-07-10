@@ -27,6 +27,7 @@ def main(mytimer: TimerRequest):
 
     if not robot_api_url:
         robot_api_url = "https://iotmon-comm-be.azurewebsites.net/api/waterbots"
+        #redis endpoint
 
     headers = {
         'Content-Type': 'application/json',
