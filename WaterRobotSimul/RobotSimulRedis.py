@@ -3,25 +3,24 @@ import os
 import random
 import json
 import redis
-
-from azure.functions import TimerRequest
 from datetime import datetime, timezone
+
+# 로깅 설정
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 MIN_LAT = 37.5020
 MAX_LAT = 37.5090
 MIN_LON = 127.0950
 MAX_LON = 127.1060
 
-# 시뮬레이션할 로봇 개수
 NUM_ROBOTS = 2
-
-# 로봇 상태 정의
-ROBOT_STATUSES = ["WORKING", "MOVING", "INREST","OFF"]
+ROBOT_STATUSES = ["WORKING", "MOVING", "INREST", "OFF"]
 
 # Redis 클라이언트 초기화 (환경 변수에서 연결 정보 로드)
 REDIS_HOST = os.environ.get("REDIS_HOST")
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
-REDIS_PORT = os.environ.get("REDIS_PORT", 6380) # 기본 Redis SSL 포트
-REDIS_SSL = os.environ.get("REDIS_SSL", "true").lower() == "true" # SSL 사용 여부
+REDIS_PORT = os.environ.get("REDIS_PORT", 6380)
+REDIS_SSL = os.environ.get("REDIS_SSL", "true").lower() == "true"
 
 redis_client = None
 if REDIS_HOST and REDIS_PASSWORD:
@@ -31,63 +30,66 @@ if REDIS_HOST and REDIS_PASSWORD:
             port=int(REDIS_PORT),
             password=REDIS_PASSWORD,
             ssl=REDIS_SSL,
-            decode_responses=True # 응답을 문자열로 디코딩
+            decode_responses=True
         )
-        redis_client.ping() # 연결 테스트
+        redis_client.ping()
         logging.info("Successfully connected to Redis.")
     except Exception as e:
         logging.error(f"Failed to connect to Redis: {e}")
 else:
     logging.warning("Redis connection details not found in environment variables. Simulator will not push to Redis.")
 
-
-def main(mytimer: TimerRequest):
+def main(): # mytimer: TimerRequest 인자 제거, Azure Function이 아닌 일반 스크립트로 가정
     utc_timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
     logging.info('Robot simulator function started at: %s', utc_timestamp)
-
-    #apim_subscription_key = os.environ.get("APIM_SUBSCRIPTION_KEY")
 
     if not redis_client:
         logging.error("Redis client not initialized. Skipping data push.")
         return
 
-
     for i in range(NUM_ROBOTS):
-        
-        robotid = f"aw-robot-{i + 1:02d}"  # robot-01, robot-02
+        robotid = f"aw-robot-{i + 1:02d}"
 
-        # 랜덤 위치 생성 (소수점 6자리로 포맷)
         latitude = round(MIN_LAT + (MAX_LAT - MIN_LAT) * random.random(), 6)
         longitude = round(MIN_LON + (MAX_LON - MIN_LON) * random.random(), 6)
+        status = random.choice(ROBOT_STATUSES) # 상태를 랜덤하게 선택
 
-        # 랜덤 상태 선택
-        status = ROBOT_STATUSES[0]
-
-        # JSON 메시지 생성
         robot_data = {
             "botId": robotid,
-            "location": str(latitude)+","+ str(longitude), # 문자열로 변환하여 전송
+            "location": f"{latitude},{longitude}",
             "botName": robotid,
             "status": status,
-            "locationCooSys":"GCS;WGS84",
-            "lastUpdated": datetime.now().isoformat() # 현재 시간 (ISO 8601 형식)
+            "locationCooSys": "GCS;WGS84",
+            "lastUpdated": datetime.now().isoformat()
         }
         
         json_data = json.dumps(robot_data)
 
         try:
-            logging.info("Sending data for %s: %s", robotid, json_data)
+            logging.info("Processing data for %s: %s", robotid, json_data)
             
-            redis_client.set(f"robot:{robotid}:status", json_data)
+            # Redis Hash에 로봇의 최신 상태 저장 (HSET)
+            # HSET key field value
+            redis_client.hset(f"robot:{robotid}", mapping=robot_data)
+            logging.info(f"Saved robot:{robotid} to Redis Hash.")
 
+            # Redis Pub/Sub 채널에 메시지 발행 (PUBLISH)
+            # PUBLISH channel message
+            redis_client.publish("robot_updates", json_data)
+            logging.info(f"Published data for {robotid} to 'robot_updates' channel.")
 
-        except redis_client.exceptions.RequestException as e:
-            logging.error("Error sending data for %s: %s", robotid, e)
+        except redis.exceptions.RedisError as e:
+            logging.error("Redis error for %s: %s", robotid, e)
         except Exception as e:
             logging.error("An unexpected error occurred for %s: %s", robotid, e)
 
     logging.info('Robot simulator function finished.')
-    
 
-                 
-    
+if __name__ == "__main__":
+    # 스크립트를 직접 실행할 경우 주기적으로 데이터를 푸시하도록 설정
+    # 실제 Azure Function에서는 Timer Trigger에 의해 호출됩니다.
+    # 여기서는 테스트를 위해 무한 루프를 사용합니다.
+    import time
+    while True:
+        main()
+        time.sleep(5) # 5초마다 데이터 생성 및 푸시

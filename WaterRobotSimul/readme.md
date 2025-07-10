@@ -9,3 +9,9 @@ For a `TimerTrigger` to work, you provide a schedule in the form of a [cron expr
 ## Learn more
 
 <TODO> Documentation
+
+
+###   프로젝트 구성 순서
+requirements.txt에 다음 두 모듈 추가
+azure-functions
+redis
