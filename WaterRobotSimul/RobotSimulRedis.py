@@ -2,7 +2,6 @@ import logging
 import os
 import random
 import json
-import requests
 import redis
 
 from azure.functions import TimerRequest
@@ -46,7 +45,6 @@ def main(mytimer: TimerRequest):
     utc_timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
     logging.info('Robot simulator function started at: %s', utc_timestamp)
 
-    robot_api_url = os.environ.get("ROBOT_API_URL")
     #apim_subscription_key = os.environ.get("APIM_SUBSCRIPTION_KEY")
 
     if not redis_client:
@@ -83,7 +81,7 @@ def main(mytimer: TimerRequest):
             redis_client.set(f"robot:{robotid}:status", json_data)
 
 
-        except requests.exceptions.RequestException as e:
+        except redis_client.exceptions.RequestException as e:
             logging.error("Error sending data for %s: %s", robotid, e)
         except Exception as e:
             logging.error("An unexpected error occurred for %s: %s", robotid, e)
