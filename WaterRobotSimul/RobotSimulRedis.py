@@ -39,7 +39,7 @@ if REDIS_HOST and REDIS_PASSWORD:
 else:
     logging.warning("Redis connection details not found in environment variables. Simulator will not push to Redis.")
 
-def main(): # mytimer: TimerRequest 인자 제거, Azure Function이 아닌 일반 스크립트로 가정
+def main(mytimer: TimerRequest): # mytimer: TimerRequest 인자 제거, Azure Function이 아닌 일반 스크립트로 가정
     utc_timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
     logging.info('Robot simulator function started at: %s', utc_timestamp)
 
@@ -84,12 +84,3 @@ def main(): # mytimer: TimerRequest 인자 제거, Azure Function이 아닌 일�
             logging.error("An unexpected error occurred for %s: %s", robotid, e)
 
     logging.info('Robot simulator function finished.')
-
-if __name__ == "__main__":
-    # 스크립트를 직접 실행할 경우 주기적으로 데이터를 푸시하도록 설정
-    # 실제 Azure Function에서는 Timer Trigger에 의해 호출됩니다.
-    # 여기서는 테스트를 위해 무한 루프를 사용합니다.
-    import time
-    while True:
-        main()
-        time.sleep(5) # 5초마다 데이터 생성 및 푸시
