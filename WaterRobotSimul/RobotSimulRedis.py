@@ -3,6 +3,7 @@ import os
 import random
 import json
 import requests
+import redis
 
 from azure.functions import TimerRequest
 from datetime import datetime, timezone
@@ -17,6 +18,29 @@ NUM_ROBOTS = 2
 # 로봇 상태 정의
 ROBOT_STATUSES = ["WORKING", "MOVING", "INREST","OFF"]
 
+# Redis 클라이언트 초기화 (환경 변수에서 연결 정보 로드)
+REDIS_HOST = os.environ.get("REDIS_HOST")
+REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
+REDIS_PORT = os.environ.get("REDIS_PORT", 6380) # 기본 Redis SSL 포트
+REDIS_SSL = os.environ.get("REDIS_SSL", "true").lower() == "true" # SSL 사용 여부
+
+redis_client = None
+if REDIS_HOST and REDIS_PASSWORD:
+    try:
+        redis_client = redis.StrictRedis(
+            host=REDIS_HOST,
+            port=int(REDIS_PORT),
+            password=REDIS_PASSWORD,
+            ssl=REDIS_SSL,
+            decode_responses=True # 응답을 문자열로 디코딩
+        )
+        redis_client.ping() # 연결 테스트
+        logging.info("Successfully connected to Redis.")
+    except Exception as e:
+        logging.error(f"Failed to connect to Redis: {e}")
+else:
+    logging.warning("Redis connection details not found in environment variables. Simulator will not push to Redis.")
+
 
 def main(mytimer: TimerRequest):
     utc_timestamp = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
@@ -25,15 +49,10 @@ def main(mytimer: TimerRequest):
     robot_api_url = os.environ.get("ROBOT_API_URL")
     #apim_subscription_key = os.environ.get("APIM_SUBSCRIPTION_KEY")
 
-    if not robot_api_url:
-        robot_api_url = "https://iotmon-comm-be.azurewebsites.net/api/waterbots"
-        #redis endpoint
+    if not redis_client:
+        logging.error("Redis client not initialized. Skipping data push.")
+        return
 
-    headers = {
-        'Content-Type': 'application/json',
-    }
-    #if apim_subscription_key:
-    #    headers['Ocp-Apim-Subscription-Key'] = apim_subscription_key
 
     for i in range(NUM_ROBOTS):
         
@@ -55,14 +74,14 @@ def main(mytimer: TimerRequest):
             "locationCooSys":"GCS;WGS84",
             "lastUpdated": datetime.now().isoformat() # 현재 시간 (ISO 8601 형식)
         }
+        
+        json_data = json.dumps(robot_data)
 
         try:
-            logging.info("Sending data for %s: %s", robotid, json.dumps(robot_data))
-            response = requests.post(robot_api_url, headers=headers, json=robot_data)
-            response.raise_for_status() # HTTP 오류 발생 시 예외 발생
+            logging.info("Sending data for %s: %s", robotid, json_data)
+            
+            redis_client.set(f"robot:{robotid}:status", json_data)
 
-            logging.info("Successfully sent data for %s. Status: %d, Response: %s",
-                         robotid, response.status_code, response.text)
 
         except requests.exceptions.RequestException as e:
             logging.error("Error sending data for %s: %s", robotid, e)
