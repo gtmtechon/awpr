@@ -1,4 +1,5 @@
 redis
+pip3
 #azure-functions
 #requests
 
